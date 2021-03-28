@@ -660,7 +660,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPose(
     Eigen::Vector3d imupose = pose_.block<3, 1>(0,3);
 
     std::string path;
-    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    path = "/workspace/assignments/08-filtering-advanced/src/lidar_localization/slam_data/traj";
     std::ofstream gt, vec;
     gt.open(path + "/gt.txt", std::ios::app);
     vec.open(path + "/vec.txt", std::ios::app);
@@ -711,7 +711,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
 
 
     std::string path;
-    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    path = "/workspace/assignments/08-filtering-advanced/src/lidar_localization/slam_data/traj";
     std::ofstream gt, vec;
     gt.open(path + "/gt.txt", std::ios::app);
     vec.open(path + "/vec.txt", std::ios::app);
@@ -774,7 +774,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
 
 
     std::string path;
-    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    path = "/workspace/assignments/08-filtering-advanced/src/lidar_localization/slam_data/traj";
     std::ofstream gt, vec;
     gt.open(path + "/gt.txt", std::ios::app);
     vec.open(path + "/vec.txt", std::ios::app);
@@ -821,7 +821,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
     Eigen::Vector3d imupose = pose_.block<3, 1>(0,3);
 
     std::string path;
-    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    path = "/workspace/assignments/08-filtering-advanced/src/lidar_localization/slam_data/traj";
     std::ofstream gt, vec;
     gt.open(path + "/gt.txt", std::ios::app);
     vec.open(path + "/vec.txt", std::ios::app);
