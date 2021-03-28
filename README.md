@@ -10,10 +10,10 @@
 [News](https://github.com/bulinx/bulinx-08-filtering-advanced/blob/3f023ba4fece5b10e43fc37a9fc11a8549f05e23/src/lidar_localization/src/models/kalman_filter/error_state_kalman_filter.cpp#L746)
 结果如下：
 <img src="doc/images/2.png" alt="Terminator" width="100%">
-
+<img src="doc/images/8.png" alt="Terminator" width="100%">
 若不考虑运动模型：
 <img src="doc/images/3.png" alt="Terminator" width="100%">
-
+<img src="doc/images/9.png" alt="Terminator" width="100%">
 
 
 ## 在良好的基础上,增加编码器融合的内容
@@ -23,6 +23,7 @@
 结果如下：
 <img src="doc/images/4.jpg" alt="Terminator" width="100%">
 <img src="doc/images/5.png" alt="Terminator" width="100%">
+<img src="doc/images/10.png" alt="Terminator" width="100%">
 
 不考虑编码器融合：
 [ignore](https://github.com/bulinx/bulinx-08-filtering-advanced/blob/3f023ba4fece5b10e43fc37a9fc11a8549f05e23/src/lidar_localization/src/models/kalman_filter/error_state_kalman_filter.cpp#L685)
@@ -30,3 +31,4 @@
 结果如下：
 <img src="doc/images/6.png" alt="Terminator" width="100%">
 <img src="doc/images/7.png" alt="Terminator" width="100%">
+<img src="doc/images/11.png" alt="Terminator" width="100%">
