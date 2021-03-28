@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <ostream>
+#include <chrono>
 
 // use sophus to handle so3 hat & SO3 log operations:
 #include <sophus/so3.hpp>
@@ -638,6 +639,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPose(
     const Eigen::Matrix4d &T_nb,
     Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
+    std::cout << "POSE " << std::endl;
     // set measurement:
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
     Eigen::Matrix3d C_nn_obs = pose_.block<3, 3>(0,0) * T_nb.block<3, 3>(0,0).transpose();
@@ -653,7 +655,23 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPose(
     // set Kalman gain:
     MatrixRPose R = GPose_*P_*GPose_.transpose() + RPose_;
     K = P_*GPose_.transpose()*R.inverse();
+
+    Eigen::Vector3d gtpose = T_nb.block<3, 1>(0,3);
+    Eigen::Vector3d imupose = pose_.block<3, 1>(0,3);
+
+    std::string path;
+    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    std::ofstream gt, vec;
+    gt.open(path + "/gt.txt", std::ios::app);
+    vec.open(path + "/vec.txt", std::ios::app);
+    uint64_t sys_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    gt  << sys_time << " " << gtpose.x()  << " " << gtpose.y() << " " << gtpose.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+    vec << sys_time << " " << imupose.x()  << " " << imupose.y() << " " << imupose.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
 }
+
+
+
 
 /**
  * @brief  correct error estimation using pose and body velocity measurement
@@ -661,11 +679,169 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPose(
  * @param  v_b, input velocity measurement
  * @return void
  */
+
+/*
+
+void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
+    const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
+    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+) {
+    std::cout << "POSE " << std::endl;
+    // set measurement:
+    Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
+    Eigen::Matrix3d C_nn_obs = pose_.block<3, 3>(0,0) * T_nb.block<3, 3>(0,0).transpose();
+
+    Eigen::Vector3d VEL = pose_.block<3, 3>(0,0).transpose()*vel_;
+
+    std::cout << "VEL:   " << VEL.x() << "  " << VEL.y()<< "  " << VEL.z() << std::endl;
+    std::cout << "v_b:   " << v_b.x() << "  " << v_b.y()<< "  " << v_b.z() << std::endl;
+
+    YPose_.block<3, 1>(0, 0) = P_nn_obs;
+    YPose_.block<3, 1>(3, 0) = Sophus::SO3d::vee(Eigen::Matrix3d::Identity() - C_nn_obs);
+
+    Y = YPose_;
+
+    // set measurement equation:
+    G = GPose_;
+
+    // set Kalman gain:
+    MatrixRPose R = GPose_*P_*GPose_.transpose() + RPose_;
+    K = P_*GPose_.transpose()*R.inverse();
+
+
+
+    std::string path;
+    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    std::ofstream gt, vec;
+    gt.open(path + "/gt.txt", std::ios::app);
+    vec.open(path + "/vec.txt", std::ios::app);
+
+    uint64_t sys_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    std::cout << sys_time << std::endl;
+
+    //double time_cur = ros::Time::now().toSec();
+    gt  << sys_time << " " << 0  << " " << 0 << " " << 0 << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+    vec << sys_time << " " << 0  << " " << VEL.y() << " " << VEL.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+
+
+}
+
+
+*/
+
+
+/*
+
+void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
+    const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
+    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+) {
+    std::cout << "POSE_VEL_CON " << std::endl;
+    // set measurement:
+    Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
+    Eigen::Matrix3d C_nn_obs = pose_.block<3, 3>(0,0) * T_nb.block<3, 3>(0,0).transpose();
+    Eigen::Vector3d v_bb_obs = pose_.block<3, 3>(0,0).transpose()*vel_ - v_b;
+
+    Eigen::Vector3d VEL = pose_.block<3, 3>(0,0).transpose()*vel_;
+
+    std::cout << "VEL:   " << VEL.x() << "  " << VEL.y()<< "  " << VEL.z() << std::endl;
+    std::cout << "v_b:   " << v_b.x() << "  " << v_b.y()<< "  " << v_b.z() << std::endl;
+
+    VectorYPoseVelCons YPoseVelCons = VectorYPoseVelCons::Zero();
+    YPoseVelCons.block<3, 1>(2, 0) = v_bb_obs;
+    YPoseVelCons.block<3, 1>(0, 0) = P_nn_obs;
+    YPoseVelCons.block<3, 1>(5, 0) = Sophus::SO3d::vee(Eigen::Matrix3d::Identity() - C_nn_obs);;
+
+    Y = YPoseVelCons;
+
+    // set measurement equation:
+    GPoseVelCons_ = MatrixGPoseVelCons::Zero();
+
+    GPoseVelCons_.block<3, 3>(2, INDEX_ERROR_VEL) =  pose_.block<3, 3>(0,0).transpose();
+    GPoseVelCons_.block<3, 3>(2, INDEX_ERROR_ORI) = -pose_.block<3, 3>(0,0).transpose()*Sophus::SO3d::hat(vel_); 
+
+    GPoseVelCons_.block<3, 3>(0, INDEX_ERROR_VEL) = Eigen::Matrix3d::Zero();
+    GPoseVelCons_.block<3, 3>(0, INDEX_ERROR_ORI) = Eigen::Matrix3d::Zero();
+
+    GPoseVelCons_.block<3, 3>(0, INDEX_ERROR_POS) = Eigen::Matrix3d::Identity();
+    GPoseVelCons_.block<3, 3>(5, INDEX_ERROR_ORI) = Eigen::Matrix3d::Identity();
+
+    G = GPoseVelCons_;
+
+    MatrixRPoseVelCons RCons = GPoseVelCons_*P_*GPoseVelCons_.transpose() + CPoseVelCons_*RPoseVel_*CPoseVelCons_.transpose();
+    K = P_*GPoseVelCons_.transpose()*RCons.inverse();
+
+
+    std::string path;
+    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    std::ofstream gt, vec;
+    gt.open(path + "/gt.txt", std::ios::app);
+    vec.open(path + "/vec.txt", std::ios::app);
+    uint64_t sys_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    gt  << sys_time << " " << 0  << " " << 0 << " " << 0 << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+    vec << sys_time << " " << 0  << " " << VEL.y() << " " << VEL.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+
+}
+
+
+*/
+
 void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
     const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
     Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
     // set measurement:
+    std::cout << "POSE_VEL " << std::endl;
+    Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
+    Eigen::Matrix3d C_nn_obs = pose_.block<3, 3>(0,0) * T_nb.block<3, 3>(0,0).transpose();
+    Eigen::Vector3d v_bb_obs = pose_.block<3, 3>(0,0).transpose()*vel_ - v_b;
+
+    YPoseVel_.block<3, 1>(0, 0) = P_nn_obs;
+    YPoseVel_.block<3, 1>(3, 0) = v_bb_obs;
+    YPoseVel_.block<3, 1>(6, 0) = Sophus::SO3d::vee(Eigen::Matrix3d::Identity() - C_nn_obs);
+
+    Y = YPoseVel_;
+
+    // set measurement equation:
+    GPoseVel_ = MatrixGPoseVel::Zero();
+    GPoseVel_.block<3, 3>(0, INDEX_ERROR_POS) = Eigen::Matrix3d::Identity();
+    GPoseVel_.block<3, 3>(6, INDEX_ERROR_ORI) = Eigen::Matrix3d::Identity();
+    GPoseVel_.block<3, 3>(3, INDEX_ERROR_VEL) =  pose_.block<3, 3>(0,0).transpose();
+    GPoseVel_.block<3, 3>(3, INDEX_ERROR_ORI) = -pose_.block<3, 3>(0,0).transpose()*Sophus::SO3d::hat(vel_);
+
+    G = GPoseVel_;
+
+    // set Kalman gain:
+    MatrixRPoseVel R = GPoseVel_*P_*GPoseVel_.transpose() + RPoseVel_;
+    K = P_*GPoseVel_.transpose()*R.inverse();
+
+    Eigen::Vector3d gtpose = T_nb.block<3, 1>(0,3);
+    Eigen::Vector3d imupose = pose_.block<3, 1>(0,3);
+
+    std::string path;
+    path = "/workspace/assignments/07-filtering-advanced/src/lidar_localization/slam_data/traj";
+    std::ofstream gt, vec;
+    gt.open(path + "/gt.txt", std::ios::app);
+    vec.open(path + "/vec.txt", std::ios::app);
+    uint64_t sys_time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+    gt  << sys_time << " " << gtpose.x()  << " " << gtpose.y() << " " << gtpose.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+    vec << sys_time << " " << imupose.x()  << " " << imupose.y() << " " << imupose.z() << " " << 0  << " " << 0 << " " << 0 << " " << 1 << std::endl;
+    
+}
+
+
+
+
+/*
+void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
+    const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
+    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+) {
+    // set measurement:
+    std::cout << "POSE_VEL " << std::endl;
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
     Eigen::Matrix3d C_nn_obs = pose_.block<3, 3>(0,0) * T_nb.block<3, 3>(0,0).transpose();
     Eigen::Vector3d v_bb_obs = pose_.block<3, 3>(0,0).transpose()*vel_ - v_b;
@@ -683,6 +859,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
     G = GPoseVel_;
 
     if ( !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED ) {
+        std::cout << " !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED " << std::endl;
         // set measurement, with motion constraint:
         VectorYPoseVelCons YPoseVelCons = VectorYPoseVelCons::Zero();
         YPoseVelCons.block<7, 1>(0, 0) = YPoseVel_.block<7, 1>(0, 0);
@@ -700,11 +877,20 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
         MatrixRPoseVelCons RCons = GPoseVelCons_*P_*GPoseVelCons_.transpose() + CPoseVelCons_*RPoseVel_*CPoseVelCons_.transpose();
         K = P_*GPoseVelCons_.transpose()*RCons.inverse();
     } else {
+        std::cout << " not not not !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED " << std::endl;
         // set Kalman gain:
         MatrixRPoseVel R = GPoseVel_*P_*GPoseVel_.transpose() + RPoseVel_;
         K = P_*GPoseVel_.transpose()*R.inverse();
     }
 }
+
+
+
+*/
+
+
+
+
 
 /**
  * @brief  correct error estimation using position measurement
@@ -740,6 +926,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
     const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
     Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
+    std::cout << "POSI_VEL " << std::endl;
     // parse measurement:
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
     Eigen::Vector3d v_bb_obs = pose_.block<3, 3>(0,0).transpose()*vel_ - v_b;
@@ -755,7 +942,8 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
 
     G = GPosiVel_;
 
-    if ( !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED ) {
+    //if ( !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED ) {
+    if ( 0 ) {
         // set measurement, with motion constraint:
         VectorYPosiVelCons YPosiVelCons = VectorYPosiVelCons::Zero();
         YPosiVelCons.block<4, 1>(0, 0) = YPosiVel_.block<4, 1>(0, 0);
@@ -773,6 +961,7 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
         MatrixRPosiVelCons RCons = GPosiVelCons_*P_*GPosiVelCons_.transpose() + CPosiVelCons_*RPosiVel_*CPosiVelCons_.transpose();
         K = P_*GPosiVelCons_.transpose()*RCons.inverse();
     } else {
+        std::cout << "else " << std::endl;
         // set Kalman gain:
         MatrixRPosiVel R = GPosiVel_*P_*GPosiVel_.transpose() + RPosiVel_;
         K = P_*GPosiVel_.transpose()*R.inverse();
@@ -789,32 +978,44 @@ void ErrorStateKalmanFilter::CorrectErrorEstimation(
     const MeasurementType &measurement_type, 
     const Measurement &measurement
 ) {
+    std::cout << "CorrectErrorEstimation" << std::endl;
     Eigen::VectorXd Y;
     Eigen::MatrixXd G, K;
     switch ( measurement_type ) {
         case MeasurementType::POSE:
+            std::cout << "POSE" << std::endl;
             CorrectErrorEstimationPose(
                 measurement.T_nb,
                 Y, G, K
             );
             break;
         case MeasurementType::POSE_VEL:
+            std::cout << "POSE_VEL" << std::endl;
             CorrectErrorEstimationPoseVel(
                 measurement.T_nb, measurement.v_b, measurement.w_b,
                 Y, G, K
             );
             break;
         case MeasurementType::POSI:
+            std::cout << "POSI" << std::endl;
             CorrectErrorEstimationPosi(
                 measurement.T_nb,
                 Y, G, K
             );
             break;
         case MeasurementType::POSI_VEL:
-            CorrectErrorEstimationPosiVel(
-                measurement.T_nb, measurement.v_b, measurement.w_b,
+            std::cout << "POSI_VEL" << std::endl;
+            //CorrectErrorEstimationPosiVel(
+            //CorrectErrorEstimationPoseVel(
+            //    measurement.T_nb, measurement.v_b, measurement.w_b,
+            //    Y, G, K
+            //);
+            CorrectErrorEstimationPose(
+                measurement.T_nb,
                 Y, G, K
             );
+
+
         default:
             break;
     }
